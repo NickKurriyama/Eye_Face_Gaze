@@ -97,7 +97,7 @@ class FaceModel:
         [0., 0.03791103, 0.0180805],
         [-0.00771924, 0.03711846, 0.01940396],
     ],
-                                     dtype=np.float)
+                                     dtype=float)
 
     REYE_INDICES: np.ndarray = np.array([36, 39])
     LEYE_INDICES: np.ndarray = np.array([42, 45])
@@ -114,8 +114,8 @@ class FaceModel:
         # The default values of rvec and tvec below mean that the
         # initial estimate of the head pose is not rotated and the
         # face is in front of the camera.
-        rvec = np.zeros(3, dtype=np.float)
-        tvec = np.array([0, 0, 1], dtype=np.float)
+        rvec = np.zeros(3, dtype=float)
+        tvec = np.array([0, 0, 1], dtype=float)
         _, rvec, tvec = cv2.solvePnP(self.LANDMARKS,
                                      face.landmarks,
                                      camera.camera_matrix,
