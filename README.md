@@ -1,1 +1,2 @@
-# Eye_Face_Gaze
+# Eye Face Gaze
+This project detects eye gaze using SNN
