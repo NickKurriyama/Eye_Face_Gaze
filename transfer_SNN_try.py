@@ -9,7 +9,7 @@ import pathlib
 
 import numpy as np
 import tqdm
-from torch.cuda.amp import autocast
+
 from gaze_estimation import (GazeEstimationMethod, create_dataloader,
                              create_model)
 from gaze_estimation.utils import compute_angle_error, load_config, save_config
@@ -19,7 +19,6 @@ class SpikeBlock(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1):
         super().__init__()
         self.conv1 = nn.Conv2d(in_planes, out_planes, 3, stride, 1)
-        self.bn1 = nn.BatchNorm2d(out_planes)
         self.lif1 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
         self.conv2 = nn.Conv2d(out_planes, out_planes, 3, 1, 1)
         self.lif2 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
@@ -37,39 +36,36 @@ class SpikeBlock(nn.Module):
 class ResNetSNN(nn.Module):
     def __init__(self, num_classes=10):
         super().__init__()
-        self.conv_in = nn.Conv2d(50, 64, 3, stride=1, padding=1)
-        self.conv1 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.lif1 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=10))
+        self.conv_in = nn.Conv2d(20, 64, 3, stride=1, padding=1)
+       # self.conv1 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
+        self.lif1 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
 
-        self.layer1 = SpikeBlock(50, 64)
+        self.layer1 = SpikeBlock(64, 64)
         self.layer2 = SpikeBlock(64, 128, stride=2)
         self.layer3 = SpikeBlock(128, 256, stride=2)
 
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(256, num_classes)
-        self.lif_fc = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=10))
+        self.lif_fc = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
 
     def forward(self, x, num_steps=25):
-        num_steps = int(num_steps)
+        num_steps = int(num_steps)  # fix lỗi không phải int
 
-        mem1 = self.lif1.init_leaky().to(x.device)
-        mems = [snn.Leaky(beta=0.9).init_leaky().to(x.device) for _ in range(6)]
-        mem_fc = self.lif_fc.init_leaky().to(x.device)
+        mem1 = self.lif1.init_leaky()
+        mems = [snn.Leaky(beta=0.9).init_leaky() for _ in range(6)]
+        mem_fc = self.lif_fc.init_leaky()
 
         out_accum = 0
         for t in range(num_steps):
-            x_t = (torch.rand_like(x) < x).float()  
+            x_t = torch.bernoulli(x)  # RATE ENCODING
             out = self.conv_in(x_t)
-            out = self.conv1(out)
-            out = self.bn1(out)
+           # out = self.conv1(x_t)
             out, mem1 = self.lif1(out, mem1)
 
             out, mems[0], mems[1] = self.layer1(out, mems[0], mems[1])
             out, mems[2], mems[3] = self.layer2(out, mems[2], mems[3])
             out, mems[4], mems[5] = self.layer3(out, mems[4], mems[5])
 
-            out = self.avg_pool(out)
+            out = F.avg_pool2d(out, 4)
             out = out.view(out.size(0), -1)
             out = self.fc(out)
             out, mem_fc = self.lif_fc(out, mem_fc)
@@ -118,8 +114,7 @@ def test(model, test_loader, config):
             images = images.to(device)
             poses = poses.to(device)
             gazes = gazes.to(device)
-            with autocast():
-                outputs = model(images)
+            outputs = model(images)
 
             predictions.append(outputs.cpu())
             gts.append(gazes.cpu())
@@ -128,7 +123,6 @@ def test(model, test_loader, config):
     gts = torch.cat(gts)
     angle_error = float(compute_angle_error(predictions, gts).mean())
     return predictions, gts, angle_error
-
 
 
 def main():
