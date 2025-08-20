@@ -53,7 +53,7 @@ data except the person with ID 0, and run test on that person.
 ```bash
 python train.py --config configs/mpiigaze/lenet_train.yaml
 python evaluate.py --config configs/mpiigaze/lenet_eval.yaml
-python transfer_SNN.py --config configs/snn/snn_eval.yaml
+python transfer_SNN_final.py --config configs/snn/snn_eval.yaml
 ```
 
 Using [`scripts/run_all_mpiigaze_lenet.sh`](scripts/run_all_mpiigaze_lenet.sh) and
