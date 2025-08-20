@@ -32,8 +32,11 @@ python tools/preprocess_mpiigaze.py --dataset datasets/MPIIGaze -o datasets/
 bash scripts/download_mpiifacegaze_dataset.sh
 python tools/preprocess_mpiifacegaze.py --dataset datasets/MPIIFaceGaze_normalized -o datasets/
 ```
+### SNN - MPIIGaze
 
-
+```bash
+python tools/preprocess_SNN.py --dataset datasets/MPIIGaze -o datasets/
+```
 ## Usage
 
 This repository uses [YACS](https://github.com/rbgirshick/yacs) for
